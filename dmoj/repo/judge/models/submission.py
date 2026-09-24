@@ -10,7 +10,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from reversion import revisions
 
-from judge.judgeapi import abort_submission, judge_submission
+from judge.judgeapi import abort_submission, abort_submission_without_judging, judge_submission
 from judge.models.problem import Problem, SubmissionSourceAccess
 from judge.models.profile import Profile
 from judge.models.runtime import Language
@@ -128,6 +128,11 @@ class Submission(models.Model):
         return self.locked_after is not None and self.locked_after < timezone.now()
 
     def judge(self, *args, rejudge=False, force_judge=False, rejudge_user=None, **kwargs):
+        # A rejudge is charged like a new submission, so it needs credit just like submitting does.
+        # This guards every rejudge path (site button, admin actions, problem/contest bulk rejudge).
+        # Instead of silently keeping the old result, the submission ends as Aborted with the reason.
+        if rejudge and not self.has_credit_to_judge():
+            return abort_submission_without_judging(self, self.get_credit_organization().no_credit_message())
         if force_judge or not self.is_locked:
             if rejudge:
                 with revisions.create_revision(manage_manually=True):
@@ -193,23 +198,31 @@ class Submission(models.Model):
 
     update_contest.alters_data = True
 
-    def update_credit(self, consumed_credit):
+    def get_credit_organization(self):
+        """The organization charged for judging this submission (org-private problem first, then contest)."""
         problem = self.problem
-
-        organization = None
         if problem.is_organization_private and problem.organization:
-            organization = problem.organization
+            return problem.organization
 
-        if organization is None:
-            contest_object = None
-            try:
-                contest_object = self.contest_object
-            except AttributeError:
-                pass
+        contest_object = None
+        try:
+            contest_object = self.contest_object
+        except AttributeError:
+            pass
 
-            if contest_object is not None and contest_object.is_organization_private and contest_object.organization:
-                organization = contest_object.organization
+        if contest_object is not None and contest_object.is_organization_private and contest_object.organization:
+            return contest_object.organization
 
+        return None
+
+    def has_credit_to_judge(self):
+        if not settings.BKDNOJ_ENABLE_ORGANIZATION_CREDIT_LIMITATION:
+            return True
+        organization = self.get_credit_organization()
+        return organization is None or organization.has_credit_left()
+
+    def update_credit(self, consumed_credit):
+        organization = self.get_credit_organization()
         if organization:
             organization.consume_credit(consumed_credit)
 

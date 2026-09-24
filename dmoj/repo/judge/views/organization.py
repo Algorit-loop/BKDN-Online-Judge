@@ -590,6 +590,19 @@ class ProblemListOrganization(PrivateOrganizationMixin, ProblemList):
 class MonthlyCreditUsageOrganization(LoginRequiredMixin, TitleMixin, AdminOrganizationMixin, ListView):
     template_name = 'organization/usage.html'
 
+    @staticmethod
+    def split_credit(seconds):
+        # Split on the absolute value: floor division on a negative number gives e.g. -1h 3m for -57m
+        seconds = int(seconds)
+        sign = '-' if seconds < 0 else ''
+        seconds = abs(seconds)
+        return {
+            'sign': sign,
+            'hour': seconds // 3600,
+            'minute': (seconds % 3600) // 60,
+            'second': seconds % 60,
+        }
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = self.organization.name
@@ -609,18 +622,15 @@ class MonthlyCreditUsageOrganization(LoginRequiredMixin, TitleMixin, AdminOrgani
         cost_chart = get_lines_chart(days, {
             _('Cost (thousand vnd)'): [
                 round(
-                    credit / sec_per_hour * settings.BKDNOJ_PRICE_PER_HOUR, 3,
+                    max(0, credit - settings.BKDNOJ_MONTHLY_FREE_CREDIT) / sec_per_hour *
+                    settings.BKDNOJ_PRICE_PER_HOUR,
+                    3,
                 ) for credit in used_credits
             ],
         })
 
-        paid_credit = int(self.organization.paid_credit)
-
-        context['paid_credit'] = {
-            'hour': paid_credit // sec_per_hour,
-            'minute': (paid_credit % sec_per_hour) // 60,
-            'second': paid_credit % 60,
-        }
+        context['free_credit'] = self.split_credit(self.organization.free_credit)
+        context['paid_credit'] = self.split_credit(self.organization.paid_credit)
 
         context['credit_chart'] = chart
         context['cost_chart'] = cost_chart

@@ -4124,10 +4124,8 @@ msgid "You have exceeded the submission limit for this problem."
 msgstr "Bạn đã vượt quá giới hạn lần nộp của bài này."
 
 #: judge/views/problem.py:675
-#, fuzzy
-#| msgid "No such editorial"
 msgid "No credit"
-msgstr "Không có lời giải"
+msgstr "Hết thời gian chấm bài"
 
 #: judge/views/problem.py:677
 #, python-format
@@ -4135,6 +4133,8 @@ msgid ""
 "The organization %s has no credit left to execute this submission. Ask the "
 "organization to buy more credit."
 msgstr ""
+"Tổ chức %s đã hết thời gian chấm bài nên bài nộp này không được chấm. Hãy "
+"liên hệ quản trị viên của tổ chức để mua thêm thời gian chấm bài."
 
 #: judge/views/problem.py:751
 msgid "You are not allowed to submit to this problem."
@@ -8202,3 +8202,11 @@ msgstr "Điểm thành phần (theo subtask/batch — subtask sai được 0 đi
 #: judge/models/problem.py
 msgid "Partial (by testcase — each correct test earns points)"
 msgstr "Điểm thành phần (theo từng test — mỗi test đúng được điểm)"
+
+#: judge/forms.py
+msgid "Paid credit (hours)"
+msgstr "Thời gian chấm bài trả phí (giờ)"
+
+#: judge/models/profile.py
+msgid "Remaining purchased credits"
+msgstr "Thời gian chấm bài đã mua còn lại"

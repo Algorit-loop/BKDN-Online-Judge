@@ -9,7 +9,7 @@ from django.utils.translation import gettext as _
 from judge.models.ai_prompt import AIPromptTemplate
 from judge.models.api_key import AI_PROVIDER_CONFIGS, VISION_PROVIDERS
 
-_AI_CREATE_TIMEOUT = 120
+_AI_CREATE_TIMEOUT = 100
 
 _DEFAULT_SYSTEM_PROMPT = """You are an expert at reading competitive programming problem statements from images.
 

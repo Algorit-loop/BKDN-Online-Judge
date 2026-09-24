@@ -25,7 +25,10 @@
 {% endif %}
 {% set is_pretest = submission.is_pretested %}
 
-{% if submission.status != 'IE' %}
+{% if submission.status == 'AB' and submission.error and not submission.case_total %}
+    {# Aborted before any test ran, with a reason (e.g. rejudge refused: organization out of credit) #}
+    {% include "submission/aborted-message.html" %}
+{% elif submission.status != 'IE' %}
     {% if submission.status == 'QU' %}
         <div class="status-message status-waiting">
             <i class="fa fa-clock-o fa-2x"></i>

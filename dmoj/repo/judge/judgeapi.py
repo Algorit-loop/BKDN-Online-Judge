@@ -112,6 +112,26 @@ def judge_submission(submission, rejudge=False, batch_rejudge=False, judge_id=No
     return success
 
 
+def abort_submission_without_judging(submission, reason):
+    """Finish a submission without sending it to a judge, like an internal error but with status/result AB.
+    Used for a rejudge that is refused (e.g. the organization has no credit left), so the user sees why
+    there is no new result instead of the old one silently staying."""
+    from .models import Submission, SubmissionTestCase
+
+    updates = {'time': None, 'memory': None, 'points': None, 'result': 'AB', 'case_points': 0, 'case_total': 0,
+               'error': reason, 'rejudged_date': timezone.now(), 'status': 'AB'}
+    # Same guard as judge_submission(): never touch a submission that a judge is working on
+    if not Submission.objects.filter(id=submission.id).exclude(status__in=('P', 'G')).update(**updates):
+        return False
+
+    SubmissionTestCase.objects.filter(submission_id=submission.id).delete()
+
+    submission.status = 'AB'
+    event.post('sub_%s' % submission.id_secret, {'type': 'aborted'})
+    _post_update_submission(submission, done=True)
+    return True
+
+
 def judge_run_submission(run_submission, sample_input_files=None, custom_inputs=None):
     """Send a run-request to the bridge. Uses RunSubmission model, not Submission."""
     from .models.run_submission import RunSubmission

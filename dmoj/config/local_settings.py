@@ -357,6 +357,9 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 
 BKDNOJ_CP_TICKET = 5
 
+# Block submissions to org-private problems/contests when org has no credit left (free + paid)
+BKDNOJ_ENABLE_ORGANIZATION_CREDIT_LIMITATION = True
+
 # REGISTRATION_OPEN = False
 
 DMOJ_PASSWORD_RESET_LIMIT_COUNT = 5

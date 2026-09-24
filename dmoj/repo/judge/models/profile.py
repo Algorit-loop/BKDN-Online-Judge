@@ -9,14 +9,14 @@ import webauthn
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F, Max, Sum
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.functional import cached_property
 from django.utils.timezone import now
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 from fernet_fields import EncryptedCharField
 from pyotp.utils import strings_equal
 from sortedm2m.fields import SortedManyToManyField
@@ -37,8 +37,14 @@ class EncryptedNullCharField(EncryptedCharField):
         return super(EncryptedNullCharField, self).get_prep_value(value)
 
 
+def default_monthly_free_credit():
+    # A new organization starts with the monthly free credit (from any creation path: site or admin).
+    # Callable so that changing BKDNOJ_MONTHLY_FREE_CREDIT does not require a new migration.
+    return settings.BKDNOJ_MONTHLY_FREE_CREDIT
+
+
 class Organization(models.Model):
-    name = models.CharField(max_length=128, verbose_name=_('organization title'))
+    name =models.CharField(max_length=128, verbose_name=_('organization title'))
     slug = models.SlugField(max_length=128, verbose_name=_('organization slug'),
                             help_text=_('Organization name shown in URLs.'),
                             validators=[RegexValidator(r'^[a-zA-Z]',
@@ -67,6 +73,11 @@ class Organization(models.Model):
     member_count = models.IntegerField(default=0)
     current_consumed_credit = models.FloatField(default=0, help_text='Total used credit this month')
     paid_credit = models.FloatField(default=0, help_text=_('Remaining purchased credits'), db_column='available_credit')
+    free_credit = models.FloatField(
+        default=default_monthly_free_credit,
+        help_text=_('Remaining free credits for the current month'),
+        db_column='monthly_credit',
+    )
 
     _pp_table = [pow(settings.BKDNOJ_ORG_PP_STEP, i) for i in range(settings.BKDNOJ_ORG_PP_ENTRIES)]
 
@@ -112,14 +123,61 @@ class Organization(models.Model):
     def get_users_url(self):
         return reverse('organization_users', args=[self.slug])
 
+    # Changed in the background by the bridge (consume_credit) and the monthly reset task
+    CREDIT_FIELDS = ('paid_credit', 'free_credit', 'current_consumed_credit')
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_credit = {f: getattr(instance, f) for f in cls.CREDIT_FIELDS if f in field_names}
+        return instance
+
+    def save(self, *args, **kwargs):
+        # A full save() from a form or admin page opened earlier would write back stale credit values and
+        # undo whatever the bridge charged in between. So a credit field is only written when it was changed
+        # on this instance, or when it is named explicitly in update_fields.
+        loaded = getattr(self, '_loaded_credit', None)
+        if loaded and not self._state.adding and not args and kwargs.get('update_fields') is None:
+            unchanged = {f for f, value in loaded.items() if getattr(self, f) == value}
+            if unchanged:
+                deferred = self.get_deferred_fields()
+                kwargs['update_fields'] = [f.name for f in self._meta.concrete_fields if not f.primary_key and
+                                           f.name not in unchanged and f.attname not in deferred]
+        super().save(*args, **kwargs)
+        self._loaded_credit = {f: getattr(self, f) for f in self.CREDIT_FIELDS}
+
     def has_credit_left(self):
-        return self.paid_credit > 0
+        return self.paid_credit + self.free_credit > 0
+
+    def no_credit_message(self):
+        # Shown when a submission or a rejudge is refused, so both say the same thing
+        return gettext('The organization %s has no credit left to execute this submission. '
+                       'Ask the organization to buy more credit.') % self.name
 
     def consume_credit(self, consumed):
-        # paid credit can be negative if we don't enable the monthly credit limitation
-        self.paid_credit -= consumed
-        self.current_consumed_credit += consumed
-        self.save(update_fields=['paid_credit', 'current_consumed_credit'])
+        # Lock the row: without it, two charges at the same time (or a charge during the monthly reset)
+        # would each read the same balance and one of them would be lost.
+        with transaction.atomic():
+            org = Organization.objects.select_for_update().get(pk=self.pk)
+
+            # Track the full amount before `consumed` is reduced by the free credit below
+            org.current_consumed_credit += consumed
+
+            # reduce credit in free credit first
+            # then reduce the left to available credit
+            if org.free_credit >= consumed:
+                org.free_credit -= consumed
+            else:
+                consumed -= org.free_credit
+                org.free_credit = 0
+                # paid credit can be negative if we don't enable the monthly credit limitation
+                org.paid_credit -= consumed
+
+            org.save(update_fields=list(self.CREDIT_FIELDS))
+
+        for field in self.CREDIT_FIELDS:
+            setattr(self, field, getattr(org, field))
+        self._loaded_credit = org._loaded_credit
 
     class Meta:
         ordering = ['name']

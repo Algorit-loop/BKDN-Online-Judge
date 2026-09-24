@@ -122,6 +122,9 @@ BKDNOJ_IGNORED_ORGANIZATION_SUBDOMAINS = ['oj', 'www', 'localhost']
 # Enable organization credit system, if true, org will not be able to submit submissions
 # if they run out of credit
 BKDNOJ_ENABLE_ORGANIZATION_CREDIT_LIMITATION = False
+# 3 hours free per month
+# BKDNOJ_MONTHLY_FREE_CREDIT = 3 * 60 * 60
+BKDNOJ_MONTHLY_FREE_CREDIT = 0
 BKDNOJ_PRICE_PER_HOUR = 50
 
 

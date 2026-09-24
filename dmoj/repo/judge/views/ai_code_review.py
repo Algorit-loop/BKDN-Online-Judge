@@ -20,7 +20,7 @@ from judge.models.user_problem_tag import UserProblemTag
 from judge.views.ai_problem_creator import _extract_text_from_response
 from judge.views.api_key import _parse_http_error
 
-_AI_REVIEW_TIMEOUT = 120
+_AI_REVIEW_TIMEOUT = 100
 
 _DEFAULT_REVIEW_PROMPT = """You are an expert competitive programming analyst.
 Analyze the following code submission.

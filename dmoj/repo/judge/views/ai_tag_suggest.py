@@ -13,7 +13,7 @@ from judge.models.api_key import (
 from judge.views.ai_problem_creator import _extract_text_from_response
 from judge.views.api_key import _parse_http_error
 
-_AI_TAG_SUGGEST_TIMEOUT = 120
+_AI_TAG_SUGGEST_TIMEOUT = 100
 
 _DEFAULT_TAG_SUGGEST_PROMPT = """You are an expert competitive programming problem classifier.
 

@@ -453,6 +453,10 @@ class TagProblemAssignForm(Form):
 class OrganizationForm(ModelForm):
     def clean_paid_credit(self):
         credit = self.cleaned_data.get('paid_credit')
+        if self.instance.pk is not None and 'paid_credit' not in self.changed_data:
+            # Not edited: keep the exact stored value (the field shows a rounded one), so that
+            # Organization.save() skips it and does not overwrite what the bridge charged meanwhile.
+            return self.instance.paid_credit
         if credit is not None:
             return credit * 3600
         return None
@@ -463,6 +467,10 @@ class OrganizationForm(ModelForm):
             'name', 'slug', 'paid_credit', 'is_open',
             'about', 'logo_override_image', 'admins',
         ]
+        # Entered in hours here (see clean_paid_credit above), but stored in seconds
+        labels = {
+            'paid_credit': _('Paid credit (hours)'),
+        }
         widgets = {'about': MartorWidget(attrs={'data-markdownfy-url': reverse_lazy('organization_preview')})}
         if HeavySelect2MultipleWidget is not None:
             widgets.update({

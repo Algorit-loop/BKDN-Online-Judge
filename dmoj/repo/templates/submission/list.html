@@ -166,15 +166,14 @@
                         return;
                     var id = message.id;
                     var row = table.find('tr#' + id);
-                    if (row.length < 1) {
+                    var is_new = row.length < 1;
+                    if (is_new) {
                         if (id < first)
                             return;
                         first = id;
-                        row = $('<tr>', {id: id, 'class': 'submission-row'}).hide().prependTo(table);
-                        if (table.find('>tr').length >= {{ paginator.per_page }})
-                            table.find('>tr:last-child').slideUp('slow', function () {
-                                $(this).remove();
-                            });
+                        // Not inserted yet: the viewer may not be allowed to see this submission (the server
+                        // answers 404), and then the list must stay untouched.
+                        row = $('<tr>', {id: id, 'class': 'submission-row'}).hide();
                     }
                     if (force || !doing_ajax) {
                         if (!force) doing_ajax = true;
@@ -182,6 +181,18 @@
                             url: '{{ url('submission_single_query') }}',
                             data: {id: id, show_problem: show_problem}
                         }).done(function (data) {
+                            if (is_new) {
+                                var existing = table.find('tr#' + id);
+                                if (existing.length) {
+                                    row = existing;  // another update already inserted it meanwhile
+                                } else {
+                                    row.prependTo(table);
+                                    if (table.find('>tr').length > {{ paginator.per_page }})
+                                        table.find('>tr:last-child').slideUp('slow', function () {
+                                            $(this).remove();
+                                        });
+                                }
+                            }
                             var was_shown = row.is(':visible');
                             var hasGrading = row.find('.result-bar-grading').length > 0;
                             if (hasGrading) {

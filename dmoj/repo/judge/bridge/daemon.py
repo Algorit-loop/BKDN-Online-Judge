@@ -11,6 +11,7 @@ from judge.bridge.judge_list import JudgeList
 from judge.bridge.server import Server
 from judge.models import Judge, Submission
 from judge.models.gensol_job import GENSOL_IN_PROGRESS_STATUSES, GensolJob
+from judge.models.run_submission import RunSubmission
 
 logger = logging.getLogger('judge.bridge')
 
@@ -52,10 +53,34 @@ def reset_gensol_jobs():
     logger.info('Reset %d orphaned gensol job(s) on bridge startup: %s', len(stale_ids), stale_ids)
 
 
+def reset_run_submissions():
+    """Same as for Submissions: an IDE run still queued or grading when the bridge starts was orphaned by the
+    restart. Left as is it would never finish, the IDE would keep waiting, and it would count forever
+    against the user's pending submission limit in RunSubmitView.
+    """
+    from judge import event_poster as event
+
+    stale_ids = list(RunSubmission.objects.filter(status__in=RunSubmission.IN_PROGRESS_GRADING_STATUS)
+                     .values_list('id', flat=True))
+    if not stale_ids:
+        return
+
+    RunSubmission.objects.filter(id__in=stale_ids).update(status='IE', result='IE', error=None)
+    for run_id in stale_ids:
+        # Best-effort, as in reset_gensol_jobs: lets an IDE that is still open stop waiting.
+        try:
+            event.post('run_%s' % RunSubmission.get_id_secret(run_id), {'type': 'internal-error'})
+        except Exception:
+            logger.warning('Could not post restart event for orphaned run %d', run_id)
+
+    logger.info('Reset %d orphaned IDE run(s) on bridge startup: %s', len(stale_ids), stale_ids)
+
+
 def judge_daemon(run_monitor=False, problem_storage_globs=None):
     reset_judges()
     Submission.objects.filter(status__in=Submission.IN_PROGRESS_GRADING_STATUS) \
         .update(status='IE', result='IE', error=None)
+    reset_run_submissions()
     reset_gensol_jobs()
     judges = JudgeList()
 

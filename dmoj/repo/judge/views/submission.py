@@ -178,8 +178,8 @@ def make_batch(batch, cases, statuses=None, scoring_mode='partial_batch'):
     if batch:
         if scoring_mode == 'partial_testcase':
             total_count = len(cases)
-            # Normalize each testcase to coefficient [0,1] (same logic as judge_handler)
-            sum_coeff = sum((c.points if c.points <= 1 else (c.points / c.total if c.total else 0)) for c in cases)
+            # Fraction earned on each testcase, as in judge_handler.on_grading_end
+            sum_coeff = sum((c.points / c.total if c.total else 0) for c in cases)
             batch_pts = max(map(attrgetter('total'), cases))
             result['points'] = (sum_coeff / total_count * batch_pts) if total_count > 0 else 0
         else:
@@ -414,13 +414,15 @@ class SubmissionsListBase(DiggPaginatorMixin, TitleMixin, ListView):
 
             if not self.request.user.has_perm('judge.see_private_contest'):
                 # Show submissions for any contest you can edit or visible scoreboard
-                contest_queryset = Contest.objects.filter(Q(authors=self.request.profile) |
-                                                          Q(curators=self.request.profile) |
-                                                          Q(scoreboard_visibility=Contest.SCOREBOARD_VISIBLE) |
-                                                          Q(end_time__lt=timezone.now())).distinct()
-                queryset = queryset.filter(Q(user=self.request.profile) |
-                                           Q(contest_object__in=contest_queryset) |
-                                           Q(contest_object__isnull=True))
+                visible_contests = Q(scoreboard_visibility=Contest.SCOREBOARD_VISIBLE) | Q(end_time__lt=timezone.now())
+                visible_submissions = Q(contest_object__isnull=True)
+                # Anonymous users have no profile: Q(authors=None) would match every contest without authors
+                # (and Q(curators=None) every contest without curators), exposing hidden scoreboards.
+                if self.request.profile is not None:
+                    visible_contests |= Q(authors=self.request.profile) | Q(curators=self.request.profile)
+                    visible_submissions |= Q(user=self.request.profile)
+                contest_queryset = Contest.objects.filter(visible_contests).distinct()
+                queryset = queryset.filter(visible_submissions | Q(contest_object__in=contest_queryset))
 
         if self.selected_languages:
             # MariaDB can't optimize this subquery for some insane, unknown reason,
@@ -718,6 +720,57 @@ class UserProblemSubmissions(ConditionalUserTabMixin, UserMixin, ProblemSubmissi
         return context
 
 
+def _in_submission_list(view_class, request, submission, **kwargs):
+    """Whether `submission` is in the list `view_class` would show to this request, running that view's own
+    access check and queryset — the same code that decides the rows when the page is loaded."""
+    view = view_class()
+    view.setup(request, **kwargs)
+    # What each list's get()/dispatch() prepares before building its queryset (see UserMixin,
+    # ProblemSubmissionsBase, ForceContestMixin and SubmissionsListBase.get); no filters selected.
+    if 'user' in kwargs:
+        view.profile, view.username = submission.user, kwargs['user']
+    if 'problem' in kwargs:
+        view.problem, view.problem_name = submission.problem, submission.problem.code
+    if 'contest' in kwargs:
+        view._contest = submission.contest_object
+    view.selected_languages, view.selected_statuses, view.selected_organization = set(), set(), None
+    try:
+        if hasattr(view, 'can_access_this_view') and not view.can_access_this_view():
+            return False
+        if view.access_check(request) is not None:
+            return False
+        return view.get_queryset().filter(id=submission.id).exists()
+    except (Http404, PermissionDenied, ObjectDoesNotExist, AttributeError):
+        return False
+
+
+def _visible_in_any_submission_list(request, submission):
+    """Live updates (templates/submission/list.html) fetch every submission they hear about, whatever list
+    the viewer is on. Answer only for submissions that one of the live lists would also show on reload, so a
+    live row never reveals more than reloading the page does (e.g. a contest with a hidden scoreboard)."""
+    from judge.views.organization import SubmissionListOrganization
+
+    user = submission.user.user.username
+    problem = submission.problem.code
+    lists = [
+        (AllSubmissions, {}),
+        (AllUserSubmissions, {'user': user}),
+        (ProblemSubmissions, {'problem': problem}),
+        (UserProblemSubmissions, {'problem': problem, 'user': user}),
+    ]
+    contest = submission.contest_object
+    if contest is not None:
+        lists += [
+            (AllContestSubmissions, {'contest': contest.key}),
+            (UserAllContestSubmissions, {'contest': contest.key, 'user': user}),
+            (UserContestSubmissions, {'contest': contest.key, 'problem': problem, 'user': user}),
+        ]
+    organization = submission.problem.organization
+    if organization is not None:
+        lists.append((SubmissionListOrganization, {'slug': organization.slug}))
+    return any(_in_submission_list(view_class, request, submission, **kwargs) for view_class, kwargs in lists)
+
+
 def single_submission(request):
     request.no_profile_update = True
     if 'id' not in request.GET or not request.GET['id'].isdigit():
@@ -729,7 +782,7 @@ def single_submission(request):
 
     authenticated = request.user.is_authenticated
     submission = get_object_or_404(submission_related(Submission.objects.all()), id=int(request.GET['id']))
-    if not submission.problem.is_accessible_by(request.user):
+    if not _visible_in_any_submission_list(request, submission):
         raise Http404()
 
     return render(request, 'submission/row.html', {

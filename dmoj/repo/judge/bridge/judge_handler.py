@@ -626,7 +626,9 @@ class JudgeHandler(ZlibPacketHandler):
                 points += case.points
                 total += case.total
             elif is_partial_testcase:
-                coeff = case.points if case.points <= 1 else (case.points / case.total if case.total else 0)
+                # Fraction of this test that was earned. Every checker (standard and custom: testlib, themis,
+                # cms, ...) reports points already scaled to the test's value, so points/total is always right.
+                coeff = case.points / case.total if case.total else 0
                 if case.batch in batches:
                     batches[case.batch][0] += coeff
                     batches[case.batch][1] += 1

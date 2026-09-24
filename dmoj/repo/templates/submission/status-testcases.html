@@ -25,8 +25,9 @@
 {% endif %}
 {% set is_pretest = submission.is_pretested %}
 
-{% if submission.status == 'AB' and submission.error and not submission.case_total %}
-    {# Aborted before any test ran, with a reason (e.g. rejudge refused: organization out of credit) #}
+{% set abort_reason = submission.get_abort_reason() %}
+{% if abort_reason %}
+    {# Rejudge refused: organization out of credit #}
     {% include "submission/aborted-message.html" %}
 {% elif submission.status != 'IE' %}
     {% if submission.status == 'QU' %}

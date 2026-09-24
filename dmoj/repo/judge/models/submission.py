@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.urls import reverse
-from django.utils import timezone
+from django.utils import timezone, translation
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from reversion import revisions
@@ -132,7 +132,10 @@ class Submission(models.Model):
         # This guards every rejudge path (site button, admin actions, problem/contest bulk rejudge).
         # Instead of silently keeping the old result, the submission ends as Aborted with the reason.
         if rejudge and not self.has_credit_to_judge():
-            return abort_submission_without_judging(self, self.get_credit_organization().no_credit_message())
+            # Stored in English; get_abort_reason() translates it for each viewer
+            with translation.override('en'):
+                reason = self.get_credit_organization().no_credit_message()
+            return abort_submission_without_judging(self, reason)
         if force_judge or not self.is_locked:
             if rejudge:
                 with revisions.create_revision(manage_manually=True):
@@ -214,6 +217,19 @@ class Submission(models.Model):
             return contest_object.organization
 
         return None
+
+    def get_abort_reason(self):
+        """Why this submission was aborted without being judged (a rejudge refused for lack of credit),
+        in the viewer's language. None for any other submission, e.g. an aborted one whose `error`
+        only holds compiler warnings."""
+        if self.status != 'AB' or not self.error:
+            return None
+        organization = self.get_credit_organization()
+        if organization is None:
+            return None
+        with translation.override('en'):
+            stored_reason = organization.no_credit_message()
+        return organization.no_credit_message() if self.error == stored_reason else None
 
     def has_credit_to_judge(self):
         if not settings.BKDNOJ_ENABLE_ORGANIZATION_CREDIT_LIMITATION:

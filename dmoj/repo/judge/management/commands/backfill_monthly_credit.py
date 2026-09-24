@@ -13,9 +13,10 @@ class Command(BaseCommand):
 
     def backfill_credit(self, org, month_start, next_month_start):
         credit_problem = (
+            # Same rule as Submission.get_credit_organization() used by the bridge
             Submission.objects.filter(
+                problem__is_organization_private=True,
                 problem__organization=org,
-                contest_object__isnull=True,
                 date__gte=month_start,
                 date__lt=next_month_start,
             )
@@ -29,6 +30,8 @@ class Command(BaseCommand):
 
         credit_contest = (
             Submission.objects.filter(
+                problem__is_organization_private=False,
+                contest_object__is_organization_private=True,
                 contest_object__organization=org,
                 date__gte=month_start,
                 date__lt=next_month_start,

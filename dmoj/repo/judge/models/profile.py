@@ -44,7 +44,7 @@ def default_monthly_free_credit():
 
 
 class Organization(models.Model):
-    name =models.CharField(max_length=128, verbose_name=_('organization title'))
+    name = models.CharField(max_length=128, verbose_name=_('organization title'))
     slug = models.SlugField(max_length=128, verbose_name=_('organization slug'),
                             help_text=_('Organization name shown in URLs.'),
                             validators=[RegexValidator(r'^[a-zA-Z]',

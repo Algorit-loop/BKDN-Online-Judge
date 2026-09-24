@@ -354,7 +354,6 @@ class UserProgressPage(UserPage):
             })
 
         context['tag_data'] = tag_data
-        context['tag_data_json'] = mark_safe(json.dumps(tag_data))
         context['total_problems'] = (
             UserProblemTag.objects
             .filter(user=self.object)

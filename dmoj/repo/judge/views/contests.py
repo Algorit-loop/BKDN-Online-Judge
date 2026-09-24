@@ -643,6 +643,14 @@ class ContestJoin(LoginRequiredMixin, ContestMixin, SingleObjectMixin, View):
                         defaults={'real_start': timezone.now()},
                     )[0]
 
+        # Joining another contest also leaves the current one: apply the same rule as ContestLeave, otherwise
+        # "left a live contest => can only spectate" is bypassed by joining something else and coming back.
+        previous = profile.current_contest
+        if (previous is not None and previous.contest_id != contest.id and previous.live and
+                not previous.contest.ended):
+            previous.has_left = True
+            previous.save(update_fields=['has_left'])
+
         profile.current_contest = participation
         profile.save()
         contest._updating_stats_only = True

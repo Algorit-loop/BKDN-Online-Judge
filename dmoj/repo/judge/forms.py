@@ -174,6 +174,11 @@ class ProblemEditForm(ModelForm):
         self.user = kwargs.pop('user', None)
         super(ProblemEditForm, self).__init__(*args, **kwargs)
 
+        # Organization problems stay under their org admins' control (as upstream); elsewhere only users allowed
+        # to change a problem's visibility get the field (same rule as ProblemAdmin, judge/admin/problem.py).
+        if org_pk is None and not (self.user and self.user.has_perm('judge.change_public_visibility')):
+            self.fields.pop('is_public')
+
         if org_pk is not None:
             self.fields['testers'].label = _('Private users')
             self.fields['testers'].help_text = _('If private, only these users may see the problem.')

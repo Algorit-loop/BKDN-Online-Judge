@@ -113,7 +113,7 @@
     {% if tag_data %}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        var tagData = {{ tag_data_json }};
+        var tagData = {{ tag_data|tojson }};
         var maxCount = tagData.length > 0 ? tagData[0].count : 1;
         var chart = document.getElementById('tag-chart');
 

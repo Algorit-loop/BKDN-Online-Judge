@@ -128,6 +128,8 @@ class JudgeHandler(ZlibPacketHandler):
                                                    info='IE due to shutdown on gensol grading'))
             elif self._is_run:
                 RunSubmission.objects.filter(id=self._working).update(status='IE', result='IE', error='')
+                # Without this the IDE keeps waiting for the result until the page is reloaded.
+                event.post('run_%s' % RunSubmission.get_id_secret(self._working), {'type': 'internal-error'})
                 json_log.error(self._make_json_log(sub=self._working, action='close',
                                                    info='IE due to shutdown on run grading'))
             else:
@@ -460,6 +462,7 @@ class JudgeHandler(ZlibPacketHandler):
             _cleanup_working_dir(expected)
         elif self._is_run:
             RunSubmission.objects.filter(id=expected).update(status='IE', result='IE', error=None)
+            event.post('run_%s' % RunSubmission.get_id_secret(expected), {'type': 'internal-error'})
         else:
             Submission.objects.filter(id=expected).update(status='IE', result='IE', error=None)
             Submission.objects.filter(id=got, status='QU').update(status='IE', result='IE', error=None)

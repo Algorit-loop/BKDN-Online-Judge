@@ -113,7 +113,7 @@
                         <i class="fa fa-repeat"></i> {{ _('Resubmit') }}
                     </a>
                 {% endif %}
-                {% if request.user == submission.user.user and not submission.language.file_only %}
+                {% if request.user == submission.user.user and not submission.language.file_only and submission.contest_object_id is none %}
                     <a href="{{ url('submission_source', submission.id) }}?ai_review=1" class="action-btn">
                         <i class="fa fa-magic"></i> {{ _('AI Review') }}
                     </a>

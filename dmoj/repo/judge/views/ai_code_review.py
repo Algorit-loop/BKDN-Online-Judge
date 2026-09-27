@@ -185,6 +185,10 @@ def _get_submission_for_review(submission_id, user):
     if submission.user_id != user.id:
         return None, JsonResponse({'error': _('You can only review your own submissions')}, status=403)
 
+    # Same rule as the Review button (SubmissionSource): a review could hint at the fix during the contest
+    if submission.contest_object_id is not None:
+        return None, JsonResponse({'error': _('AI review is not available for contest submissions.')}, status=403)
+
     return submission, None
 
 
@@ -268,8 +272,9 @@ def _ai_code_review_post(request, submission):
     # Parse tags from AI response
     review_text, tag_names = _parse_tags_from_review(result)
 
-    # Save tags to UserProblemTag (per-problem deduplication)
-    saved_tags = _save_user_problem_tags(request.profile, sub.problem, sub, tag_names)
+    # Skills progress only counts accepted solutions; reviewing a submission that is no longer AC drops its tags
+    tags_recorded = sub.result == 'AC'
+    saved_tags = _save_user_problem_tags(request.profile, sub.problem, sub, tag_names if tags_recorded else [])
 
     # Save review to DB (without TAGS line)
     review = AICodeReview.objects.create(
@@ -289,6 +294,7 @@ def _ai_code_review_post(request, submission):
         'output_language': review.output_language,
         'created_at': review.created_at.isoformat(),
         'tags': saved_tags,
+        'tags_recorded': tags_recorded,
     })
 
 
@@ -304,10 +310,10 @@ def _ai_code_review_get(request, submission):
               .first())
 
     if review:
-        # Also return tags for this problem
+        # Tags of this submission, as returned right after the review (POST)
         tags = list(
             UserProblemTag.objects
-            .filter(user=request.profile, problem=sub.problem)
+            .filter(user=request.profile, submission=sub)
             .values_list('tag__name', flat=True)
         )
         return JsonResponse({
@@ -318,6 +324,7 @@ def _ai_code_review_get(request, submission):
             'output_language': review.output_language,
             'created_at': review.created_at.isoformat(),
             'tags': tags,
+            'tags_recorded': sub.result == 'AC',
         })
 
     return JsonResponse({'exists': False})

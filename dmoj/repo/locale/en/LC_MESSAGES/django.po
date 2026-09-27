@@ -7321,3 +7321,9 @@ msgstr "This action cannot be undone."
 msgid "This problem currently has no test cases."
 msgstr "This problem currently has no test cases."
 
+
+msgid "AI review is not available for contest submissions."
+msgstr ""
+
+msgid "Tags are only added to your skills progress for accepted (AC) submissions."
+msgstr ""

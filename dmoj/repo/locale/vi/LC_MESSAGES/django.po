@@ -8205,3 +8205,9 @@ msgstr "Thời gian chấm bài trả phí (giờ)"
 #: judge/models/profile.py
 msgid "Remaining purchased credits"
 msgstr "Thời gian chấm bài đã mua còn lại"
+
+msgid "AI review is not available for contest submissions."
+msgstr "Không thể dùng AI review cho bài nộp trong contest."
+
+msgid "Tags are only added to your skills progress for accepted (AC) submissions."
+msgstr "Tag chỉ được ghi vào tiến độ năng lực khi bài nộp đạt AC."

@@ -22,7 +22,7 @@
             margin-top: 0 !important;
         }
 
-        {% if is_own_submission %}
+        {% if can_ai_review %}
         /* AI Review Modal */
         .air-overlay {
             display: none;
@@ -174,6 +174,11 @@
             margin-top: 10px;
             margin-bottom: 4px;
         }
+        .air-tags-note {
+            font-size: 0.85em;
+            font-style: italic;
+            color: #888;
+        }
         {% endif %}
     </style>
 {% endblock %}
@@ -213,13 +218,14 @@
         </script>
     {% endcompress %}
     {% block content_js_media %}
-        {% if is_own_submission %}
+        {% if can_ai_review %}
         <script type="text/javascript">
         $(function() {
             'use strict';
 
             var MODELS = {{ provider_models_json|safe }};
             var REVIEW_URL = '{{ url("submission_ai_review", submission.id) }}';
+            var TAGS_NOT_RECORDED_MSG = {{ _('Tags are only added to your skills progress for accepted (AC) submissions.')|htmltojs }};
             var KEYS_URL = '{{ url("api_key_list") }}';
             var SUBMISSION_ID = {{ submission.id }};
 
@@ -289,6 +295,12 @@
                         badge.style.backgroundColor = tagColor(t);
                         tagsContainer.appendChild(badge);
                     });
+                    tagsSection.style.display = '';
+                } else if (data.tags_recorded === false) {
+                    var note = document.createElement('span');
+                    note.className = 'air-tags-note';
+                    note.textContent = TAGS_NOT_RECORDED_MSG;
+                    tagsContainer.appendChild(note);
                     tagsSection.style.display = '';
                 } else {
                     tagsSection.style.display = 'none';
@@ -463,7 +475,8 @@
                             model: data.model,
                             output_language: data.output_language,
                             created_at: data.created_at,
-                            tags: data.tags || []
+                            tags: data.tags || [],
+                            tags_recorded: data.tags_recorded
                         };
                         showResult(cachedReview);
                         againBtn.style.display = '';
@@ -507,7 +520,7 @@
                 <i class="fa fa-repeat"></i> {{ _('Resubmit') }}
             </a>
         {% endif %}
-        {% if is_own_submission %}
+        {% if can_ai_review %}
             <a href="#" id="ai-review-btn" class="source-action-btn" onclick="openAIReviewModal(); return false;">
                 <i class="fa fa-magic"></i> {{ _('Review with AI') }}
             </a>
@@ -542,7 +555,7 @@
         </table>
     </div>
 
-    {% if is_own_submission %}
+    {% if can_ai_review %}
     <div id="air-overlay" class="air-overlay">
         <div class="air-modal">
             <div class="air-header">

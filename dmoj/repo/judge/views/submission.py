@@ -127,7 +127,9 @@ class SubmissionSource(SubmissionDetailBase):
         context['highlighted_source'] = highlight_code(submission.source.source, submission.language.pygments)
         context['is_own_submission'] = (self.request.user.is_authenticated and
                                          submission.user_id == self.request.profile.id)
-        if context['is_own_submission']:
+        # Never for contest submissions: a review of a failed submission would be a hint during the contest
+        context['can_ai_review'] = context['is_own_submission'] and submission.contest_object_id is None
+        if context['can_ai_review']:
             from judge.models.api_key import AI_PROVIDER_MODELS, AI_PROVIDER_CHOICES
             context['provider_models_json'] = json.dumps(AI_PROVIDER_MODELS)
             context['ai_providers'] = AI_PROVIDER_CHOICES

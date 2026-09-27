@@ -382,7 +382,8 @@ class ContestParticipationForm(ModelForm):
 
 
 class ContestParticipationAdmin(admin.ModelAdmin):
-    fields = ('contest', 'user', 'real_start', 'virtual', 'is_disqualified', 'has_left')
+    fields = ('contest', 'user', 'real_start', 'virtual', 'is_disqualified', 'has_left', 'focus_violations')
+    readonly_fields = ('focus_violations',)
     list_display = ('contest', 'username', 'show_virtual', 'real_start', 'score', 'cumtime', 'tiebreaker', 'has_left')
     actions = ['recalculate_results']
     actions_on_bottom = actions_on_top = True

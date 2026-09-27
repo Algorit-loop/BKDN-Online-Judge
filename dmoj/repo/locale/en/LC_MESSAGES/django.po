@@ -7330,3 +7330,12 @@ msgstr ""
 
 msgid "Invalid output language"
 msgstr ""
+
+msgid "Suggested tags"
+msgstr ""
+
+msgid "Tags in skills progress"
+msgstr ""
+
+msgid "suggested tags"
+msgstr ""

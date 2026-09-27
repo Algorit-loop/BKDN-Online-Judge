@@ -277,10 +277,13 @@ def _ai_code_review_post(request, submission):
 
     # Parse tags from AI response
     review_text, tag_names = _parse_tags_from_review(result)
+    # Keep only existing tags, in the AI's order, without duplicates
+    existing = set(ProblemType.objects.filter(name__in=tag_names).values_list('name', flat=True))
+    suggested_tags = list(dict.fromkeys(name for name in tag_names if name in existing))
 
     # Skills progress only counts accepted solutions; reviewing a submission that is no longer AC drops its tags
     tags_recorded = sub.result == 'AC'
-    saved_tags = _save_user_problem_tags(request.profile, sub.problem, sub, tag_names if tags_recorded else [])
+    saved_tags = _save_user_problem_tags(request.profile, sub.problem, sub, suggested_tags if tags_recorded else [])
 
     # Save review to DB (without TAGS line)
     review = AICodeReview.objects.create(
@@ -290,6 +293,7 @@ def _ai_code_review_post(request, submission):
         model=model,
         review_text=review_text,
         output_language=output_language,
+        tags=suggested_tags,
     )
 
     return JsonResponse({

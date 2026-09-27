@@ -16,6 +16,9 @@ class AICodeReview(models.Model):
     model = models.CharField(max_length=100, verbose_name=_('model'))
     review_text = models.TextField(verbose_name=_('review text'))
     output_language = models.CharField(max_length=20, default='vi', verbose_name=_('output language'))
+    # Every valid tag the AI suggested in this review, even when it is not added to the skills progress
+    # (UserProblemTag only keeps tags of AC submissions, and only from the latest review of each one)
+    tags = models.JSONField(default=list, blank=True, verbose_name=_('suggested tags'))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('created at'))
 
     class Meta:

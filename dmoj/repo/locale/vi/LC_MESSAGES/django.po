@@ -8214,3 +8214,12 @@ msgstr "Tag chỉ được ghi vào tiến độ năng lực khi bài nộp đ�
 
 msgid "Invalid output language"
 msgstr "Ngôn ngữ phản hồi không hợp lệ"
+
+msgid "Suggested tags"
+msgstr "Tag được gợi ý"
+
+msgid "Tags in skills progress"
+msgstr "Tag trong tiến độ năng lực"
+
+msgid "suggested tags"
+msgstr "tag được gợi ý"

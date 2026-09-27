@@ -1,3 +1,5 @@
+import re
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -28,3 +30,10 @@ class AIPromptTemplate(models.Model):
             return cls.objects.get(key=key).prompt_text
         except cls.DoesNotExist:
             return default
+
+    @staticmethod
+    def fill(template, **values):
+        """Substitute {name} placeholders in an admin-editable prompt. Unlike str.format(), other braces (JSON or
+        code examples in the prompt) are left as they are, and substituted values are never scanned again."""
+        return re.sub(r'\{(\w+)\}', lambda m: str(values[m.group(1)]) if m.group(1) in values else m.group(0),
+                      template)

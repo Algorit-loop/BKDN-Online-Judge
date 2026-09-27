@@ -82,7 +82,7 @@ Do NOT generate code for invalid or incomplete problems. Do NOT invent constrain
 
 def _get_gen_code_prompt(problem_description, num_cases=20):
     template = AIPromptTemplate.get_prompt('ai_gen_code', _DEFAULT_GEN_CODE_PROMPT)
-    return template.format(problem_description=problem_description, num_cases=num_cases)
+    return AIPromptTemplate.fill(template, problem_description=problem_description, num_cases=num_cases)
 
 
 def _build_gen_code_payload(provider, model, system_prompt, user_message):

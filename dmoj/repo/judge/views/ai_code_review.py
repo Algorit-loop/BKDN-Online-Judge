@@ -22,6 +22,9 @@ from judge.views.api_key import _parse_http_error
 
 _AI_REVIEW_TIMEOUT = 100
 
+# Values of the language picker in the review modal (templates/submission/source.html)
+_AI_REVIEW_OUTPUT_LANGUAGES = ('Vietnamese', 'English')
+
 _DEFAULT_REVIEW_PROMPT = """You are an expert competitive programming analyst.
 Analyze the following code submission.
 
@@ -45,7 +48,8 @@ Output language: {output_language}"""
 def _get_review_prompt(submission, output_language='Vietnamese'):
     result_display = submission.get_result_display() or submission.get_status_display()
     template = AIPromptTemplate.get_prompt('ai_code_review', _DEFAULT_REVIEW_PROMPT)
-    prompt = template.format(
+    prompt = AIPromptTemplate.fill(
+        template,
         problem_name=submission.problem.name,
         language_name=submission.language.name,
         result=result_display,
@@ -211,7 +215,9 @@ def _ai_code_review_post(request, submission):
 
     provider = body.get('provider', '').strip()
     model = body.get('model', '').strip()
-    output_language = body.get('output_language', 'Vietnamese').strip()
+    output_language = body.get('output_language', 'Vietnamese')
+    if output_language not in _AI_REVIEW_OUTPUT_LANGUAGES:
+        return JsonResponse({'error': _('Invalid output language')}, status=400)
 
     # Validate provider
     valid_providers = {p for p, _ in AI_PROVIDER_MODELS.items()}

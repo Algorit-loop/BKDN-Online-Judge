@@ -7327,3 +7327,6 @@ msgstr ""
 
 msgid "Tags are only added to your skills progress for accepted (AC) submissions."
 msgstr ""
+
+msgid "Invalid output language"
+msgstr ""

@@ -8211,3 +8211,6 @@ msgstr "Không thể dùng AI review cho bài nộp trong contest."
 
 msgid "Tags are only added to your skills progress for accepted (AC) submissions."
 msgstr "Tag chỉ được ghi vào tiến độ năng lực khi bài nộp đạt AC."
+
+msgid "Invalid output language"
+msgstr "Ngôn ngữ phản hồi không hợp lệ"

@@ -50,7 +50,8 @@ def _get_tag_suggest_prompt(problem_description, submissions, available_tags):
 
     tags_text = '\n'.join(f"- {t['name']}: {t['full_name']}" for t in available_tags)
 
-    return template.format(
+    return AIPromptTemplate.fill(
+        template,
         problem_description=problem_description,
         submissions_section=submissions_section,
         available_tags=tags_text,

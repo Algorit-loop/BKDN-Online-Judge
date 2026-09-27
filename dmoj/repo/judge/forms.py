@@ -367,7 +367,7 @@ class ContestDownloadDataForm(Form):
 
 
 class ProblemSubmitForm(ModelForm):
-    source = CharField(max_length=65536, required=False, widget=AceWidget(theme='twilight', no_ace_media=True))
+    source = CharField(max_length=settings.ALOJ_MAX_SOURCE_LENGTH, required=False, widget=AceWidget(theme='twilight', no_ace_media=True))
     submission_file = forms.FileField(
         label=_('Source file'),
         required=False,

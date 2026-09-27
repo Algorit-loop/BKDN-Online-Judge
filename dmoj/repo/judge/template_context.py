@@ -66,6 +66,7 @@ def general_info(request):
         'REGISTRATION_OPEN': settings.REGISTRATION_OPEN,
         'perms': PermWrapper(request.user),
         'HAS_WEBAUTHN': bool(settings.WEBAUTHN_RP_ID),
+        'MAX_SOURCE_LENGTH': settings.ALOJ_MAX_SOURCE_LENGTH,
     }
 
 

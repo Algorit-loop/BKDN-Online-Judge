@@ -456,7 +456,7 @@ class ProblemDetail(ProblemMixin, SolvedProblemMixin, ProblemSubmitMixin, Commen
         # IDE limits
         context['IDE_MAX_CUSTOM_TESTCASES'] = getattr(settings, 'DMOJ_IDE_MAX_CUSTOM_TESTCASES', 5)
         context['IDE_MAX_CUSTOM_INPUT_LENGTH'] = getattr(settings, 'DMOJ_IDE_MAX_CUSTOM_INPUT_LENGTH', 65536)
-        context['IDE_MAX_SOURCE_LENGTH'] = getattr(settings, 'DMOJ_IDE_MAX_SOURCE_LENGTH', 65536)
+        context['IDE_MAX_SOURCE_LENGTH'] = settings.ALOJ_MAX_SOURCE_LENGTH
 
         if user.is_authenticated:
             submit_context = self.get_submit_context()

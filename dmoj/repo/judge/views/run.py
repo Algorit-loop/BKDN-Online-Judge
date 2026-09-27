@@ -52,7 +52,8 @@ class RunSubmitView(LoginRequiredMixin, View):
         if not source or not language_id:
             return JsonResponse({'error': 'source and language are required'}, status=400)
 
-        max_source_length = getattr(settings, 'DMOJ_IDE_MAX_SOURCE_LENGTH', 65536)
+        # Same limit as a normal submission, so code that runs can also be submitted
+        max_source_length = settings.ALOJ_MAX_SOURCE_LENGTH
         if len(source) > max_source_length:
             return JsonResponse({'error': 'Source code too long (max %d characters)' % max_source_length}, status=400)
 

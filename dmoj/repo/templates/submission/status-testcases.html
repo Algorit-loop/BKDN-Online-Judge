@@ -121,7 +121,7 @@
             {%- endif -%}
             
             {%- if batch.id -%}
-                {% set coeff = case.points if case.points <= 1 else (case.points / case.total if case.total else 0) %}
+                {% set coeff = case.points / case.total if case.total else 0 %}
                 {% set points_display = '%s/1'|format(coeff|floatformat(-3)) %}
             {%- else -%}
                 {% set points_display = '%s/%s'|format(case.points|floatformat(-3), case.total|floatformat(0)) %}

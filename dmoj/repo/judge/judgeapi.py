@@ -17,7 +17,7 @@ size_pack = struct.Struct('!I')
 def _post_update_submission(submission, done=False):
     event.post('submissions', {'type': 'done-submission' if done else 'update-submission',
                                'id': submission.id,
-                               'contest': submission.contest_key,
+                               'contest': submission.contest_object_id,
                                'user': submission.user_id, 'problem': submission.problem_id,
                                'status': submission.status, 'language': submission.language.key,
                                'organizations':
